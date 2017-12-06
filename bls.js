@@ -379,10 +379,10 @@
       return r
     }
     exports.blsInit(curveType)
-    console.log('finished')
+    // console.log('finished')
   } // setup()
   exports.init = (curveType = MCLBN_CURVE_FP254BNB) => {
-    console.log('init')
+    // console.log('init')
     const name = 'bls_c'
     return new Promise((resolve) => {
       if (isNodeJs) {
