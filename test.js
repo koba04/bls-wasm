@@ -64,114 +64,114 @@ describe('bls', () => {
       id.setStr('12345')
       serializeSubTest(id, bls.Id)
     });
+  });
 
-    describe('signature', () => {
-      it('should be able to verify the signature', () => {
-        const sec = new bls.SecretKey()
-        sec.setByCSPRNG()
-        // sec.dump('secretKey ')
-        const pub = sec.getPublicKey()
-        // pub.dump('publicKey ')
+  describe('signature', () => {
+    it('should be able to verify the signature', () => {
+      const sec = new bls.SecretKey()
+      sec.setByCSPRNG()
+      // sec.dump('secretKey ')
+      const pub = sec.getPublicKey()
+      // pub.dump('publicKey ')
 
-        const msg = 'doremifa'
-        // console.log('msg ' + msg)
-        const sig = sec.sign(msg)
-        // sig.dump('signature ')
-        assert(pub.verify(sig, msg))
-      });
+      const msg = 'doremifa'
+      // console.log('msg ' + msg)
+      const sig = sec.sign(msg)
+      // sig.dump('signature ')
+      assert(pub.verify(sig, msg))
+    });
+  });
+
+  describe('misc', () => {
+    it('should be able to get the Id value', () => {
+      const idDec = '65535'
+      const id = new bls.Id()
+      id.setStr(idDec)
+      assert(id.getStr(), '65535')
+      assert(id.getStr(16), 'ffff')
+    });
+  });
+
+  describe('share', () => {
+    const k = 4
+    const n = 10
+    const msg = 'this is a pen'
+    const msk = []
+    const mpk = []
+    const idVec = []
+    const secVec = []
+    const pubVec = []
+    const sigVec = []
+    let secStr;
+    let pubStr;
+    let sigStr;
+    beforeEach(() => {
+      for (let i = 0; i < k; i++) {
+        const sk = new bls.SecretKey()
+        sk.setByCSPRNG()
+        msk.push(sk)
+
+        const pk = sk.getPublicKey()
+        mpk.push(pk)
+      }
+      secStr = msk[0].toHexStr()
+      pubStr = mpk[0].toHexStr()
+      sigStr = msk[0].sign(msg).toHexStr()
     });
 
-    describe('misc', () => {
-      it('should be able to get the Id value', () => {
-        const idDec = '65535'
+    it('should be able to setup master key' , () => {
+      assert(mpk[0].verify(msk[0].sign(msg), msg))
+    });
+
+    it('should be able to share and recover', () => {
+      /*
+        key shareing
+      */
+      for (let i = 0; i < n; i++) {
         const id = new bls.Id()
-        id.setStr(idDec)
-        assert(id.getStr(), '65535')
-        assert(id.getStr(16), 'ffff')
-      });
-    });
+    //    blsIdSetInt(id, i + 1)
+        id.setByCSPRNG()
+        idVec.push(id)
+        const sk = new bls.SecretKey()
+        sk.share(msk, idVec[i])
+        secVec.push(sk)
 
-    describe('share', () => {
-      const k = 4
-      const n = 10
-      const msg = 'this is a pen'
-      const msk = []
-      const mpk = []
-      const idVec = []
-      const secVec = []
-      const pubVec = []
-      const sigVec = []
-      let secStr;
-      let pubStr;
-      let sigStr;
-      beforeEach(() => {
-        for (let i = 0; i < k; i++) {
-          const sk = new bls.SecretKey()
-          sk.setByCSPRNG()
-          msk.push(sk)
+        const pk = new bls.PublicKey()
+        pk.share(mpk, idVec[i])
+        pubVec.push(pk)
 
-          const pk = sk.getPublicKey()
-          mpk.push(pk)
-        }
-        secStr = msk[0].toHexStr()
-        pubStr = mpk[0].toHexStr()
-        sigStr = msk[0].sign(msg).toHexStr()
-      });
+        const sig = sk.sign(msg)
+        sigVec.push(sig)
+      }
+      /*
+        recover
+      */
+      const idxVec = randSelect(k, n)
+      // console.log('idxVec=' + idxVec)
+      let subIdVec = []
+      let subSecVec = []
+      let subPubVec = []
+      let subSigVec = []
+      for (let i = 0; i < idxVec.length; i++) {
+        let idx = idxVec[i]
+        subIdVec.push(idVec[idx])
+        subSecVec.push(secVec[idx])
+        subPubVec.push(pubVec[idx])
+        subSigVec.push(sigVec[idx])
+      }
+      {
+        const sec = new bls.SecretKey()
+        const pub = new bls.PublicKey()
+        const sig = new bls.Signature()
 
-      it('should be able to setup master key' , () => {
-        assert(mpk[0].verify(msk[0].sign(msg), msg))
-      });
-
-      it('should be able to share and recover', () => {
-        /*
-          key shareing
-        */
-        for (let i = 0; i < n; i++) {
-          const id = new bls.Id()
-      //    blsIdSetInt(id, i + 1)
-          id.setByCSPRNG()
-          idVec.push(id)
-          const sk = new bls.SecretKey()
-          sk.share(msk, idVec[i])
-          secVec.push(sk)
-
-          const pk = new bls.PublicKey()
-          pk.share(mpk, idVec[i])
-          pubVec.push(pk)
-
-          const sig = sk.sign(msg)
-          sigVec.push(sig)
-        }
-        /*
-          recover
-        */
-        const idxVec = randSelect(k, n)
-        // console.log('idxVec=' + idxVec)
-        let subIdVec = []
-        let subSecVec = []
-        let subPubVec = []
-        let subSigVec = []
-        for (let i = 0; i < idxVec.length; i++) {
-          let idx = idxVec[i]
-          subIdVec.push(idVec[idx])
-          subSecVec.push(secVec[idx])
-          subPubVec.push(pubVec[idx])
-          subSigVec.push(sigVec[idx])
-        }
-        {
-          const sec = new bls.SecretKey()
-          const pub = new bls.PublicKey()
-          const sig = new bls.Signature()
-
-          sec.recover(subSecVec, subIdVec)
-          pub.recover(subPubVec, subIdVec)
-          sig.recover(subSigVec, subIdVec)
-          const s = sec.toHexStr()
-          assert(sec.toHexStr(), secStr)
-          assert(pub.toHexStr(), pubStr)
-          assert(sig.toHexStr(), sigStr)
-        }
-      });
+        sec.recover(subSecVec, subIdVec)
+        pub.recover(subPubVec, subIdVec)
+        sig.recover(subSigVec, subIdVec)
+        const s = sec.toHexStr()
+        assert(sec.toHexStr(), secStr)
+        assert(pub.toHexStr(), pubStr)
+        assert(sig.toHexStr(), sigStr)
+      }
     });
   });
 });
